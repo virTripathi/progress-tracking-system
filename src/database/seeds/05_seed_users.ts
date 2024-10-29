@@ -9,25 +9,29 @@ export async function seed(knex: Knex): Promise<void> {
   const userRole = await knex('roles').select('id').where({ label: 'user' }).first();
 
   if (!activeStatus || !userRole) {
-    throw new Error("Super Admin status or role does not exist in the database.");
+    throw new Error("Active status or user role does not exist in the database.");
   }
 
   for (let i = 0; i < TOTAL_USERS / BATCH_SIZE; i++) {
-    const users = Array.from({ length: BATCH_SIZE }, () => ({
-      name: faker.person.fullName(),
-      email: faker.internet.email(),
-      mobile_number: Math.random() > 0.5 ? faker.phone.number() : null,
-      password: bcrypt.hash('Admin@123',10),
-      remember_token: null,
-      status_id: activeStatus.id,
-      role_id: userRole.id,
-      created_at: new Date(),
-      updated_at: new Date(),
-    }));
+
+    const users = [];
+    for (let j = 0; j < BATCH_SIZE; j++) {
+      users.push({
+        name: faker.person.fullName(),
+        email: faker.internet.email(),
+        mobile_number: Math.random() > 0.5 ? faker.phone.number() : null,
+        password: await bcrypt.hash('Admin@123', 10),
+        remember_token: null,
+        status_id: activeStatus.id,
+        role_id: userRole.id,
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
+    }
 
     await knex('users').insert(users);
     console.log(`Inserted batch ${i + 1} of ${TOTAL_USERS / BATCH_SIZE} users.`);
   }
 
-  console.log("users seeded successfully.");
+  console.log("Users seeded successfully.");
 }

@@ -1,16 +1,18 @@
 import { Request, Response } from 'express';
 import knex from '../database/knex';
+import { error } from 'console';
 
 export const startTask = async (req: Request, res: Response) => {
     try {
-        const { taskId } = req.body;
+        const { task_id } = req.body;
+        if(!task_id) return res.status(400).json({error:'Task ID is required'});
         const userId = req.user?.id;
-        const task = await knex('tasks').where({ id: taskId }).first();
+        const task = await knex('tasks').where({ id: task_id }).first();
         if (!task) {
             return res.status(404).json({ message: 'Task not found' });
         }
         const userTaskProgress = await knex('user_task_progress')
-            .where({ user_id: userId, task_id: taskId })
+            .where({ user_id: userId, task_id: task_id })
             .first();
 
         if (userTaskProgress) {
@@ -20,7 +22,7 @@ export const startTask = async (req: Request, res: Response) => {
                 return res.status(400).json({ message: 'Task already started' });
             } else if (userTaskProgress.status === 'pending') {
                 await knex('user_task_progress')
-                    .where({ user_id: userId, task_id: taskId })
+                    .where({ user_id: userId, task_id: task_id })
                     .update({
                         status: 'in_progress',
                         started_at: new Date(),
@@ -31,7 +33,7 @@ export const startTask = async (req: Request, res: Response) => {
         }
         await knex('user_task_progress').insert({
             user_id: userId,
-            task_id: taskId,
+            task_id: task_id,
             status: 'in_progress',
             started_at: new Date(),
             created_at: new Date(),
@@ -47,11 +49,12 @@ export const startTask = async (req: Request, res: Response) => {
 
 export const completeTask = async (req: Request, res: Response) => {
   try {
-    const taskId = req.body.taskId;
+    const task_id = req.body.task_id;
+    if(!task_id) return res.status(400).json({error:'Task ID is required'});
     const userId = req.user?.id;
 
     const userTaskProgress = await knex('user_task_progress')
-      .where({ user_id: userId, task_id: taskId })
+      .where({ user_id: userId, task_id: task_id })
       .first();
 
     if (!userTaskProgress) {
@@ -63,7 +66,7 @@ export const completeTask = async (req: Request, res: Response) => {
     }
 
     await knex('user_task_progress')
-      .where({ user_id: userId, task_id: taskId })
+      .where({ user_id: userId, task_id: task_id })
       .update({
         status: 'completed',
         completed_at: new Date(),
@@ -89,12 +92,12 @@ export const progress = async (req: Request, res: Response) => {
         knex.raw(`SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completedTasks`)
       ])
       .first();
-  
+      console.log(summary);
       res.status(200).json({ 
         totalTasks: summary?.totalTasks || 0,
-        assignedTasks: summary?.assignedTasks || 0,
-        noOfStartedTasks: summary?.noOfStartedTasks || 0,
-        completedTasks: summary?.completedTasks || 0,
+        assignedTasks: summary?.assignedtasks || 0,
+        noOfStartedTasks: summary?.noofstartedtasks || 0,
+        completedTasks: summary?.completedtasks || 0,
        });
     } catch (error) {
       console.error('Error retrieving user progress:', error);
